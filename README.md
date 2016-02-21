@@ -14,10 +14,10 @@ To run this software you need:
 * `go get` within the repo to fetch all required dependencies (first time only)
 * to create a postgresql database according to the file create.sql
 * go to main.go file and set the correct values for
-** username
-** password
-** db host
-** db name
+  * username
+  * password
+  * db host
+  * db name
 * call `go build`
 * run the resulting executable file on bash, cmd, or other (depending on the OS)
 
