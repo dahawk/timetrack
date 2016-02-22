@@ -23,6 +23,14 @@ To run this software you need:
 
 The software will start without console output and will listen on port 1234 (unless changed in main.go)
 
+## Possible Future Work ##
+* Impersonate (admin can create/edit/delete entries of other users)
+* basic logging (store for each entry who modified it)
+* extended logging (log table that give useful info who did what on which data when)
+* include expected work time per user
+* based on expected work time calculate over/under performance
+* import holidays to update expedted work time
+
 ## Developer/Maintainer ##
 
 Christof Horschitz (horschitz@gmail.com)
