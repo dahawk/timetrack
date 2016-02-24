@@ -46,7 +46,7 @@ CREATE TABLE public.entry
 ALTER TABLE public.entry
   OWNER TO timetrack;
 
-#intial admin user, since i had to create one every time i set up a new instance, here is a prepared admin.
-#intial password is AdminInitia1Pa5sword
-#if you use this script change the password under any circumstances!!
+-- intial admin user, since i had to create one every time i set up a new instance, here is a prepared admin.
+-- intial password is AdminInitia1Pa5sword
+-- if you use this script change the password under any circumstances!!
 insert into user (name, username, password, admin) ('admin','admin','$2a$12$1JRT5Ti4g3D6m27GVwy.3.6ozHJyn9xi6xJOuaXD4FqVC30m/6B7C',true);
