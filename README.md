@@ -22,6 +22,7 @@ To run this software you need:
 * run the resulting executable file on bash, cmd, or other (depending on the OS)
 
 The software will start without console output and will listen on port 1234 (unless changed in main.go)
+**IMPORTANT** If you use the create.sql file to set up the database, change the password for the admin user unter any circumstances!!! It is documented in the create.sql file itself and therefore public information!
 
 ## Possible Future Work ##
 * Impersonate (admin can create/edit/delete entries of other users)
@@ -30,6 +31,7 @@ The software will start without console output and will listen on port 1234 (unl
 * include expected work time per user
 * based on expected work time calculate over/under performance
 * import holidays to update expedted work time
+* import a number of users with work time from csv
 
 ## Developer/Maintainer ##
 
