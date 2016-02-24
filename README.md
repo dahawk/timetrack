@@ -22,6 +22,7 @@ To run this software you need:
 * run the resulting executable file on bash, cmd, or other (depending on the OS)
 
 The software will start without console output and will listen on port 1234 (unless changed in main.go)
+
 **IMPORTANT** If you use the create.sql file to set up the database, change the password for the admin user unter any circumstances!!! It is documented in the create.sql file itself and therefore public information!
 
 ## Possible Future Work ##
