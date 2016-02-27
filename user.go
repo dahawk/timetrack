@@ -44,7 +44,7 @@ func VerifyLogin(username, password string) (string, string) {
 	if !u.Enabled {
 		return "", "User Account is disabled"
 	}
-	pwd := fmt.Sprintf("secretsalt%ssecretsalt", password)
+	pwd := fmt.Sprintf("%s%s%s", salt, password, salt)
 
 	err = bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(pwd))
 	if err != nil {
@@ -81,7 +81,7 @@ func createUser(username, name, password, repeat string) error {
 		password != "" &&
 		repeat != "" &&
 		password == repeat {
-		saltedPassword := fmt.Sprintf("secretsalt%ssecretsalt", password)
+		saltedPassword := fmt.Sprintf("%s%s%s", salt, password, salt)
 		passwordCrypt, err := bcrypt.GenerateFromPassword([]byte(saltedPassword), 12)
 		if err != nil {
 			return err
@@ -111,7 +111,7 @@ func updateUser(id, username, name, password, repeat string) error {
 		password != "" &&
 		repeat != "" &&
 		password == repeat {
-		saltedPassword := fmt.Sprintf("secretsalt%ssecretsalt", password)
+		saltedPassword := fmt.Sprintf("%s%s%s", salt, password, salt)
 		passwordCrypt, err := bcrypt.GenerateFromPassword([]byte(saltedPassword), 12)
 		if err != nil {
 			return err

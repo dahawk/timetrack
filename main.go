@@ -20,6 +20,8 @@ var cookieHandler = securecookie.New(
 	securecookie.GenerateRandomKey(64),
 	securecookie.GenerateRandomKey(32))
 
+const salt = "<set secret salt here>"
+
 type anonStruct struct {
 	User     User
 	UserList []User
