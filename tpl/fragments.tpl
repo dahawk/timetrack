@@ -33,7 +33,7 @@
         <div class="btn-group">
           <button type="button" class="btn btn-primary navbar-padding" id="add_entry" data-toggle="modal" data-target="#add_entry_dialog">Add Entry</button>
           <button type="button" class="btn btn-default navbar-padding" id="active_entry" data-active="{{.User.ActiveEntry}}">{{if .User.ActiveEntry}}Stop{{else}}Start{{end}}</button>
-          <a href="/pdf?dateFrom={{.From}}&dateTo={{.To}}" class="btn btn-default navbar-padding" target="_blank">PDF</a>
+          <a href="/pdf?dateFrom={{.From}}&dateTo={{.To}}" class="btn btn-default navbar-padding" target="_blank" id="pdf-btn">PDF</a>
         </div>
       </li>
       {{end}}

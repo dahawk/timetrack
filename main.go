@@ -75,7 +75,11 @@ func index(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dateFrom, dateTo := getDefaultDates()
+	dateFrom, dateTo, err := getDisplayInterval(r)
+	if err != nil {
+		dateFrom, dateTo = getDefaultDates()
+	}
+
 	data := anonStruct{
 		User: trackingData,
 		From: dateFrom.Format(jsDate),
@@ -152,6 +156,63 @@ func getUserID(request *http.Request) (userID string) {
 		}
 	}
 	return userID
+}
+
+func setDispalyInterval(from, to time.Time, w http.ResponseWriter, request *http.Request) {
+	cookie, err := request.Cookie("user-session")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	cookieValue := make(map[string]string)
+	err = cookieHandler.Decode("user-session", cookie.Value, &cookieValue)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	cookieValue["from"] = from.String()
+	cookieValue["to"] = to.String()
+
+	placeCookie(cookieValue, w)
+}
+
+func getDisplayInterval(request *http.Request) (from, to time.Time, err error) {
+	cookie, err := request.Cookie("user-session")
+	if err != nil {
+		fmt.Println(err)
+		return time.Time{}, time.Time{}, err
+	}
+	cookieValue := make(map[string]string)
+	err = cookieHandler.Decode("user-session", cookie.Value, &cookieValue)
+	if err != nil {
+		fmt.Println(err)
+		return time.Time{}, time.Time{}, err
+	}
+
+	from, err = time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", cookieValue["from"])
+	if err != nil {
+		fmt.Println(err)
+		return time.Time{}, time.Time{}, err
+	}
+	to, err = time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", cookieValue["to"])
+	if err != nil {
+		fmt.Println(err)
+		return time.Time{}, time.Time{}, err
+	}
+
+	return from, to, nil
+}
+
+func placeCookie(value map[string]string, w http.ResponseWriter) {
+	if encoded, err := cookieHandler.Encode("user-session", value); err == nil {
+		cookie := &http.Cookie{
+			Name:  "user-session",
+			Value: encoded,
+			Path:  "/",
+		}
+		http.SetCookie(w, cookie)
+	}
 }
 
 func logout(w http.ResponseWriter, r *http.Request) {

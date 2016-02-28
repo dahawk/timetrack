@@ -73,7 +73,11 @@ func loadLogs(w http.ResponseWriter, r *http.Request) {
 	if to != "" {
 		dateTo, err = time.Parse(jsDate, to)
 		checkErr(err, w)
+		dur, err := time.ParseDuration("23h59m59s")
+		checkErr(err, w)
+		dateTo = dateTo.Add(dur)
 	}
+	setDispalyInterval(dateFrom, dateTo, w, r)
 
 	logs, err := GetLogsForUser(userID, dateFrom, dateTo, false)
 	if checkErr(err, w) {

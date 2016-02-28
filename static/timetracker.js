@@ -26,6 +26,10 @@ function loadLogs() {
     .done(function(data){
       $("tbody").html(data)
     });
+
+  var f=$("#from_date").val();
+  var t=$("#to_date").val();
+  $("#pdf-btn").attr("href","/pdf?dateFrom="+f+"&dateTo="+t);
 }
 
 function editEntry(elem) {
