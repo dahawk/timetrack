@@ -10,6 +10,10 @@
             $("#add_entry_submit").click(submitAddEntry);
             $("#refresh_entries").click(loadLogs);
             $("#active_entry").click(activeEntry);
+            $("#add_entry").click(function() {
+              $("#begin").val("");
+              $("#end").val("");
+            })
             $(".datepicker").datetimepicker({
               timepicker: false,
               format: 'd.m.Y'
@@ -52,11 +56,11 @@
           </div>
         </div>
       </div>
-      <div id="add_entry_dialog"  class="modal fade" role="dialog">
+      <div id="add_entry_dialog"  class="modal fade" role="dialog" data-keyboard="false">
          <div class="modal-dialog">
            <div class="modal-content">
              <div class="modal-header">
-               <button type="button" class="close" data-dismiss="modal">&times;</button>
+               <button type="button" class="close" onclick="hideEntryDialog">&times;</button>
                <h5>Add Time Entry</h5>
              </div>
              <div class="modal-body">
@@ -82,10 +86,23 @@
                </form>
              </div>
              <div class="modal-footer">
-               <button type="button" class="btn btn-primary" data-dismiss="modal" id="add_entry_submit">Save</button>
-               <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+               <button type="button" class="btn btn-primary" id="add_entry_submit">Save</button>
+               <button type="button" class="btn btn-default" onclick="hideEntryDialog()">Close</button>
              </div>
          </div>
+      </div>
+    </div>
+    <div class="container">
+      <div class="row" id="stats-block">
+        <div class="col-md-3 col-md-offset-3">
+          <p><strong>Expected Work Time:</strong> {{.Stats.ExtectedWorkTime}}</p>
+          <p><strong>Actual Work Time:</strong> {{.Stats.ActualWorkTime}}</p>
+          <p><strong>Difference:</strong> {{.Stats.Delta}}</p>
+        </div>
+        <div class="col-md-3">
+          <p><strong>Holidays:</strong> {{.Stats.Holidays}}</p>
+          <p><strong>Sickdays:</strong> {{.Stats.Sickdays}}</p>
+        </div>
       </div>
     </div>
     <table class="table table-condensed table-hover">
@@ -94,11 +111,13 @@
             <td>Action</td>
             <td colspan="2">Start</td>
             <td colspan="2">End</td>
+            <td>Duration</td>
             <td>Type</td>
           </tr>
       </thead>
       <tbody>
       </tbody>
     </table>
+  </div>
   </body>
 </html>

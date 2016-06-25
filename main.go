@@ -3,8 +3,11 @@ package main
 import (
 	"fmt"
 	"html/template"
+	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gorilla/securecookie"
@@ -20,23 +23,66 @@ var cookieHandler = securecookie.New(
 	securecookie.GenerateRandomKey(64),
 	securecookie.GenerateRandomKey(32))
 
-const salt = "<set secret salt here>"
+const (
+	updateType    string = "update"
+	createConst   string = "create"
+	salt          string = "secretsalt"
+	workTimeConst string = "Work time"
+	holidayConst  string = "holiday"
+	sickConst     string = "Sick leave"
+)
 
 type anonStruct struct {
-	User     User
-	UserList []User
-	Error    string
-	From     string
-	To       string
+	User          User
+	WorkTimeUser  User
+	UserList      []User
+	Error         string
+	From          string
+	To            string
+	from          time.Time
+	to            time.Time
+	Impersonating bool
+	Stats         timeywimey
+	WorkTime      workTimeRow
+	FullTime      bool
+}
+
+var (
+	//Info is the INFO level logger
+	Info *log.Logger
+	//Warning is the WARN level logger
+	Warning *log.Logger
+	//Error is the ERROR level logger
+	Error *log.Logger
+)
+
+func initLogging(
+	infoHandle io.Writer,
+	warningHandle io.Writer,
+	errorHandle io.Writer) {
+
+	Info = log.New(infoHandle,
+		"INFO: ",
+		log.Ldate|log.Ltime|log.Lshortfile)
+
+	Warning = log.New(warningHandle,
+		"WARNING: ",
+		log.Ldate|log.Ltime|log.Lshortfile)
+
+	Error = log.New(errorHandle,
+		"ERROR: ",
+		log.Ldate|log.Ltime|log.Lshortfile)
 }
 
 func main() {
+	initLogging(ioutil.Discard, os.Stdout, os.Stdout)
+	Info.Println("main()")
 	var err error
 
 	db, err = sqlx.Open("postgres", fmt.Sprintf("host=%s user=%s dbname=%s password=%s sslmode=disable",
 		"<host>", "<username>", "<db name>", "<password>"))
 	if err != nil {
-		log.Fatalln(err)
+		Error.Fatalln(err)
 	}
 
 	mux := http.NewServeMux()
@@ -55,14 +101,18 @@ func main() {
 	mux.HandleFunc("/storeUser", storeUser)
 	mux.HandleFunc("/loadUsers", loadUsers)
 	mux.HandleFunc("/toggleUser", toggleUser)
+	mux.HandleFunc("/impersonate", impersonate)
+	mux.HandleFunc("/unimpersonate", unimpersonate)
+	mux.HandleFunc("/worktime", worktime)
+	mux.HandleFunc("/stats", stats)
 
 	http.ListenAndServe(":1234", mux)
 }
 
 func index(w http.ResponseWriter, r *http.Request) {
+	Info.Println("index()")
 	var userID string
-	if userID = getUserID(r); userID == "" {
-		http.Redirect(w, r, "/login", 303)
+	if userID = getSessionID(w, r); userID == "" {
 		return
 	}
 
@@ -75,16 +125,29 @@ func index(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	impersonating := (getImpersonate(r) != "")
+
 	dateFrom, dateTo, err := getDisplayInterval(r)
 	if err != nil {
 		dateFrom, dateTo = getDefaultDates()
 	}
 
-	data := anonStruct{
-		User: trackingData,
-		From: dateFrom.Format(jsDate),
-		To:   dateTo.Format(jsDate),
+	logs, err := GetLogsForUser(userID, dateFrom, dateTo, false)
+	if checkErr(err, w) {
+		return
 	}
+
+	data := anonStruct{
+		User:          trackingData,
+		From:          dateFrom.Format(jsDate),
+		To:            dateTo.Format(jsDate),
+		to:            dateTo,
+		from:          dateFrom,
+		Impersonating: impersonating,
+	}
+
+	stats := calculateStats(logs, data)
+	data.Stats = stats
 
 	err = tpl.ExecuteTemplate(w, "index.tpl", data)
 	if checkErr(err, w) {
@@ -93,6 +156,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 }
 
 func login(w http.ResponseWriter, r *http.Request) {
+	Info.Println("login()")
 	tpl, err := template.ParseFiles("tpl/login.tpl", "tpl/fragments.tpl")
 	if checkErr(err, w) {
 		return
@@ -114,7 +178,8 @@ func login(w http.ResponseWriter, r *http.Request) {
 				Error: msg,
 			}
 
-			tpl.ExecuteTemplate(w, "login.tpl", data)
+			err := tpl.ExecuteTemplate(w, "login.tpl", data)
+			checkErr(err, w)
 			return
 		}
 
@@ -133,89 +198,8 @@ func login(w http.ResponseWriter, r *http.Request) {
 	tpl.ExecuteTemplate(w, "login.tpl", data)
 }
 
-func setSession(userID string, w http.ResponseWriter) {
-	value := map[string]string{
-		"userID": userID,
-	}
-
-	if encoded, err := cookieHandler.Encode("user-session", value); err == nil {
-		cookie := &http.Cookie{
-			Name:  "user-session",
-			Value: encoded,
-			Path:  "/",
-		}
-		http.SetCookie(w, cookie)
-	}
-}
-
-func getUserID(request *http.Request) (userID string) {
-	if cookie, err := request.Cookie("user-session"); err == nil {
-		cookieValue := make(map[string]string)
-		if err = cookieHandler.Decode("user-session", cookie.Value, &cookieValue); err == nil {
-			userID = cookieValue["userID"]
-		}
-	}
-	return userID
-}
-
-func setDispalyInterval(from, to time.Time, w http.ResponseWriter, request *http.Request) {
-	cookie, err := request.Cookie("user-session")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	cookieValue := make(map[string]string)
-	err = cookieHandler.Decode("user-session", cookie.Value, &cookieValue)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	cookieValue["from"] = from.String()
-	cookieValue["to"] = to.String()
-
-	placeCookie(cookieValue, w)
-}
-
-func getDisplayInterval(request *http.Request) (from, to time.Time, err error) {
-	cookie, err := request.Cookie("user-session")
-	if err != nil {
-		fmt.Println(err)
-		return time.Time{}, time.Time{}, err
-	}
-	cookieValue := make(map[string]string)
-	err = cookieHandler.Decode("user-session", cookie.Value, &cookieValue)
-	if err != nil {
-		fmt.Println(err)
-		return time.Time{}, time.Time{}, err
-	}
-
-	from, err = time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", cookieValue["from"])
-	if err != nil {
-		fmt.Println(err)
-		return time.Time{}, time.Time{}, err
-	}
-	to, err = time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", cookieValue["to"])
-	if err != nil {
-		fmt.Println(err)
-		return time.Time{}, time.Time{}, err
-	}
-
-	return from, to, nil
-}
-
-func placeCookie(value map[string]string, w http.ResponseWriter) {
-	if encoded, err := cookieHandler.Encode("user-session", value); err == nil {
-		cookie := &http.Cookie{
-			Name:  "user-session",
-			Value: encoded,
-			Path:  "/",
-		}
-		http.SetCookie(w, cookie)
-	}
-}
-
 func logout(w http.ResponseWriter, r *http.Request) {
+	Info.Println("logout()")
 	tpl, err := template.ParseFiles("tpl/login.tpl", "tpl/fragments.tpl")
 	if checkErr(err, w) {
 		return
@@ -238,52 +222,10 @@ func logout(w http.ResponseWriter, r *http.Request) {
 	tpl.ExecuteTemplate(w, "login.tpl", data)
 }
 
-func activeEntry(w http.ResponseWriter, r *http.Request) {
-	userID := getUserID(r)
-	if userID == "" {
-		http.Error(w, "invalid session", http.StatusForbidden)
-		return
-	}
-
-	entryID := r.URL.Query().Get("id")
-
-	if entryID == "" {
-		err := StoreEntry(userID, time.Time{}, time.Time{}, "Work time", "create", entryID, true)
-		if checkErr(err, w) {
-			return
-		}
-		newEntry, err := ActiveEntry(userID)
-		if checkErr(err, w) {
-			return
-		}
-		w.Write([]byte(newEntry))
-		return
-	}
-	entry, err := GetEntry(entryID)
-	if checkErr(err, w) {
-		return
-	}
-
-	from, err := time.Parse(jsDateTime, fmt.Sprintf("%s %s", entry.DateFrom, entry.TimeFrom))
-	checkErr(err, w)
-
-	err = StoreEntry(userID, from, time.Time{}, entry.Type, "update", entryID, true)
-	checkErr(err, w)
-}
-
-func checkErr(err error, w http.ResponseWriter) bool {
-	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return true
-	}
-	return false
-}
-
 func pdf(w http.ResponseWriter, r *http.Request) {
-	userID := getUserID(r)
-	if userID == "" {
-		http.Error(w, "invalid session", http.StatusForbidden)
+	Info.Println("pdf()")
+	var userID string
+	if userID = getSessionID(w, r); userID == "" {
 		return
 	}
 
@@ -309,8 +251,55 @@ func pdf(w http.ResponseWriter, r *http.Request) {
 		User: trackingData,
 		From: from,
 		To:   to,
+		from: dateFrom,
+		to:   dateTo,
 	}
 	if err == nil {
 		generatePDF(w, logs, data)
 	}
+}
+
+func impersonate(w http.ResponseWriter, r *http.Request) {
+	Info.Println("impersonate()")
+	userID := getUserID(r)
+	if userID == "" {
+		http.Error(w, "invalid session", http.StatusForbidden)
+		return
+	}
+	user, err := GetUser(userID)
+	if checkErr(err, w) {
+		return
+	}
+	if !user.Admin {
+		http.Redirect(w, r, "/", 307)
+		return
+	}
+
+	impersonateID := r.URL.Query().Get("id")
+	if impersonateID == "" {
+		http.Redirect(w, r, "/admin", 307)
+		return
+	}
+
+	setImpersonateSession(userID, impersonateID, w)
+	http.Redirect(w, r, "/", 307)
+}
+
+func unimpersonate(w http.ResponseWriter, r *http.Request) {
+	userID := getUserID(r)
+	if userID == "" {
+		http.Error(w, "invalid session", http.StatusForbidden)
+		return
+	}
+	unimpersonateMe(w, r)
+	http.Redirect(w, r, "/", 307)
+}
+
+func checkErr(err error, w http.ResponseWriter) bool {
+	if err != nil {
+		Error.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return true
+	}
+	return false
 }

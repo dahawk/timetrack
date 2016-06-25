@@ -13,3 +13,8 @@ div.navbar-padding {
 .timeselect{
   margin-bottom: 25px;
 }
+
+input[type="range"] {
+  height: 175px;
+  width: 20px;
+}

@@ -18,13 +18,18 @@ function submitAddEntry(){
     .done(function(){
       loadLogs();
     });
-
+  hideEntryDialog();
 }
 
 function loadLogs() {
   $.post("/loadLogs",$("#from_to_form").serialize())
     .done(function(data){
       $("tbody").html(data)
+    });
+
+  $.post("/stats",$("#from_to_form").serialize())
+    .done(function(data){
+      $("#stats-block").html(data)
     });
 
   var f=$("#from_date").val();
@@ -69,8 +74,12 @@ function activeEntry() {
       document.getElementById("active_entry").dataset.active=data;
       if (id === '') {
         $("#active_entry").text("Stop");
+        $("#active_entry").removeClass("btn-success");
+        $("#active_entry").addClass("btn-danger");
       } else {
         $("#active_entry").text("Start");
+        $("#active_entry").removeClass("btn-danger");
+        $("#active_entry").addClass("btn-success");
       }
 
     });
@@ -90,6 +99,7 @@ function addUser() {
   $("#username").val('');
   $("#name").val('');
   $("#user_id").val('');
+  $("#notRound").prop('checked',false);
   $("#edit_user_dialog").modal("toggle");
 }
 
@@ -146,4 +156,23 @@ function cleanDialog() {
   $("#password-alert").hide();
   $("#password").val('');
   $("#repeat").val('');
+}
+
+function updateTotal() {
+  var inputs = $('.day-input');
+  var total=0.0;
+
+  for (var i=0; i<inputs.length; i++) {
+    var val = parseFloat(inputs.eq(i).val());
+    total+=val;
+  }
+  $("#weekly-total").text(total);
+}
+
+function hideEntryDialog() {
+  $("#begin").val("");
+  $("#end").val("");
+  $("#entry_id").val("");
+  $("#create_type").val("create");
+  $("#add_entry_dialog").modal("toggle");
 }

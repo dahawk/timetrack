@@ -1,3 +1,4 @@
+//contains all functions and structs to store and retreive user data
 package main
 
 import (
@@ -19,8 +20,17 @@ type User struct {
 
 //GetUser fetches a user from the db and returns it
 func GetUser(userID string) (User, error) {
+	Info.Printf("GetUser(%s)\n", userID)
 	var u User
-	err := db.Get(&u, "select * from \"user\" where id=$1", userID)
+	err := db.Get(&u,
+		`select
+			*
+		from
+			"user"
+		where
+			id=$1`,
+		userID)
+
 	if err != nil {
 		return User{}, err
 	}
@@ -36,9 +46,19 @@ func GetUser(userID string) (User, error) {
 //VerifyLogin checks username and password against the stored values in the db.
 //returns userID for match and "" + possible error for mismatch or problem along the way
 func VerifyLogin(username, password string) (string, string) {
+	Info.Printf("VerifyLogin(%s,***)\n", username)
 	var u User
-	err := db.Get(&u, "select * from \"user\" where username=$1", username)
+	err := db.Get(&u,
+		`select
+			enabled, password, id
+		from
+			"user"
+		where
+			username=$1`,
+		username)
+
 	if err != nil {
+		fmt.Println(err)
 		return "", "Username or Password doesn't match"
 	}
 	if !u.Enabled {
@@ -56,6 +76,7 @@ func VerifyLogin(username, password string) (string, string) {
 
 //GetUserList fetches a list of all users in the db.
 func GetUserList() ([]User, error) {
+	Info.Println("GetUserList()")
 	var users []User
 	err := db.Select(&users, "select * from \"user\"")
 	if err != nil {
@@ -66,6 +87,7 @@ func GetUserList() ([]User, error) {
 
 //StoreUser takes passed user data and updates the corresponding db entry
 func StoreUser(id, username, name, password, repeat, t string) error {
+	Info.Printf("StoreUser(%s,%s,%s,***,***,%s)\n", id, username, name, t)
 	//fmt.Println(id, username, name, password, repeat, t)
 	if t == "edit" {
 		return updateUser(id, username, name, password, repeat)
@@ -76,6 +98,7 @@ func StoreUser(id, username, name, password, repeat, t string) error {
 }
 
 func createUser(username, name, password, repeat string) error {
+	Info.Printf("createUser(%s,%s,***,***)\n", username, name)
 	if username != "" &&
 		name != "" &&
 		password != "" &&
@@ -87,8 +110,13 @@ func createUser(username, name, password, repeat string) error {
 			return err
 		}
 		//fmt.Printf("insert into \"user\" (username,name,password) values (%s,%s,%s)\n", username, name, passwordCrypt)
-		_, err = db.Exec("insert into \"user\" (username,name,password) values ($1,$2,$3)",
+		_, err = db.Exec(
+			`insert into "user"
+				(username,name,password)
+			values
+				($1,$2,$3)`,
 			username, name, string(passwordCrypt))
+
 		if err != nil {
 			return err
 		}
@@ -97,6 +125,7 @@ func createUser(username, name, password, repeat string) error {
 }
 
 func updateUser(id, username, name, password, repeat string) error {
+	Info.Printf("updateUser(%s,%s,%s,***,***)\n", id, username, name)
 	if id != "" &&
 		username != "" &&
 		name != "" {
@@ -127,6 +156,7 @@ func updateUser(id, username, name, password, repeat string) error {
 
 //UpdateEnabled updates a users enabled flag according to the input
 func UpdateEnabled(userID string, enabled bool) error {
+	Info.Printf("UpdateEnabled(%s,%t)\n", userID, enabled)
 	_, err := db.Exec("update \"user\" set enabled=$1 where id=$2", enabled, userID)
 
 	return err
