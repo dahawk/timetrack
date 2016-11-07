@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/dahawk/timetrack.svg?branch=master)](https://travis-ci.org/dahawk/timetrack) 
 [![Go Report Card](https://goreportcard.com/badge/github.com/dahawk/timetrack)](https://goreportcard.com/report/github.com/dahawk/timetrack)
 
 # README #
