@@ -1,3 +1,5 @@
+[![Go Report Card](https://goreportcard.com/badge/github.com/dahawk/timetrack)](https://goreportcard.com/report/github.com/dahawk/timetrack)
+
 # README #
 
 Timetrack is a go-based programm that offers a slim, staight-forward web-interface to track employee work hours.
@@ -33,6 +35,7 @@ The software will start without console output and will listen on port 1234 (unl
 * based on expected work time calculate over/under performance
 * import holidays to update expedted work time
 * import a number of users with work time from csv
+* dockerize (you know, just for fancy :P )
 
 ## Developer/Maintainer ##
 
